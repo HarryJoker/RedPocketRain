@@ -1,0 +1,2 @@
+include ':app', ':Library'
+rootProject.name='RedPocketRain'

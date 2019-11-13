@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+
+    <!-- RedRainView -->
+    <declare-styleable name="RedPocketRainView">
+        <attr name="rainSeed" format="float" />
+        <attr name="rainDuration" format="float" />
+        <attr name="redPocketWidth" format="reference|dimension" />
+        <attr name="redPocketHeight" format="reference|dimension" />
+        <attr name="redPocketMinSpace" format="reference|dimension" />
+    </declare-styleable>
+</resources>
