@@ -12,7 +12,9 @@ import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.Toast;
 
+import com.joker.red.rain.OnRedPocketItemClickListener;
 import com.joker.red.rain.RedPocketRainView;
+import com.joker.red.rain.RedRainPocketViewAdapter;
 
 import java.util.logging.Logger;
 
@@ -37,7 +39,6 @@ public class MainActivity extends AppCompatActivity {
             mRedPocketRainView.start();
         }
 
-
         if (v.getId() == R.id.tv_stop) {
             mRedPocketRainView.stop();
         }
@@ -47,9 +48,9 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private RedPocketRainView.OnItemClickListener mOnItemClickListener = new RedPocketRainView.OnItemClickListener() {
+    private OnRedPocketItemClickListener mOnItemClickListener = new OnRedPocketItemClickListener() {
         @Override
-        public boolean onItemClick(int position, View redView) {
+        public boolean onRedPocketItemClick(int position, View redView) {
 //          startActivity(new Intent(RedRainActivity.this, RedDetailActivity.class));
             return false;
         }
@@ -72,12 +73,11 @@ public class MainActivity extends AppCompatActivity {
 
 
 
-    class MyRedRainPocketAdapter extends RedPocketRainView.RedRainPocketViewAdapter {
+    class MyRedRainPocketAdapter extends RedRainPocketViewAdapter {
 
         private Drawable mRedPocketDrawable;
 
         public MyRedRainPocketAdapter(Context context) {
-            super(context);
             mRedPocketDrawable = getDrawable(R.mipmap.ic_redpocket);
         }
 
@@ -87,7 +87,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
         @Override
-        public View getOpenRedPocketView(ViewGroup parent) {
+        public View onCreateOpenRedPocketView(View convertView, int position, ViewGroup parent) {
             View view = getLayoutInflater().inflate(R.layout.layout_open_pocket, parent, false);
             view.findViewById(R.id.iv_big_redpocket).setOnClickListener(openClick);
             view.findViewById(R.id.iv_close).setOnClickListener(closeClick);
@@ -95,13 +95,23 @@ public class MainActivity extends AppCompatActivity {
         }
 
         @Override
-        public View getRedPocketView(View redView, int position, ViewGroup parent) {
-            if (redView != null) return redView;
+        public View onBindOpenRedPocketView(View convertView, int position, ViewGroup parent) {
+            return convertView;
+        }
+
+        @Override
+        public View onCreateRedPocketView(View convertView, int position, ViewGroup parent) {
             ImageView view = new ImageView(MainActivity.this);
             view.setImageDrawable(mRedPocketDrawable);
             view.setScaleType(ImageView.ScaleType.CENTER);
             return view;
         }
+
+        @Override
+        public View onBindRedPocketView(View convertView, int position, ViewGroup parent) {
+            return convertView;
+        }
+
     }
 
 

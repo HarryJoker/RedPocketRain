@@ -56,6 +56,10 @@ public class RedPocketRainView extends FrameLayout{
     //红包高度
     private int mRedPocketHeight = 300;
 
+    private int bigRedPocketWidth = 600;
+
+    private int bigRedPocketHeight = 900;
+
     //红包最小间距
     private int mRedPocketSpace = 20;
 
@@ -71,9 +75,11 @@ public class RedPocketRainView extends FrameLayout{
     //下雨状态
     private int runState = 0;
 
-    private OnItemClickListener mOnItemClickListener = new OnItemClickListener() {
+    private View mOpenRedPocketView;
+
+    private OnRedPocketItemClickListener mOnItemClickListener = new OnRedPocketItemClickListener() {
         @Override
-        public boolean onItemClick(int position, View redView) {
+        public boolean onRedPocketItemClick(int position, View redPocketView) {
             return false;
         }
     };
@@ -98,10 +104,6 @@ public class RedPocketRainView extends FrameLayout{
         mRedPocketSpace = sp2px(typedArray.getDimension(R.styleable.RedPocketRainView_redPocketMinSpace, 10f));
 
         Log.d("RedPocketRainView", "mRedPocketWidth:" + mRedPocketWidth + ", mRedPocketHeight:" + mRedPocketHeight + ", rainDuration:" + rainDuration + ", rainSeed:" + rainSeed + ", mRedPocketSpace:" + mRedPocketSpace);
-    }
-
-    public RedPocketRainView(@NonNull Context context, @Nullable AttributeSet attrs, int defStyleAttr, int defStyleRes) {
-        super(context, attrs, defStyleAttr, defStyleRes);
     }
 
     private Handler mHandler = new Handler() {
@@ -155,8 +157,12 @@ public class RedPocketRainView extends FrameLayout{
 
     //获取adapter的redPocket或者缓存使用
     private View getNextRedPocketView(int position) {
-        View convertView = mCacheViews.size() > 0 ? mCacheViews.remove(0) : null;
-        convertView = mAdapter.getRedPocketView(convertView, position, this);
+        View convertView = null;
+        if (mCacheViews.size() > 0) {
+            convertView = mAdapter.onBindRedPocketView(mCacheViews.remove(0), position, this);
+        } else {
+            convertView = mAdapter.onCreateRedPocketView(convertView, position, this);
+        }
         convertView.setClickable(true);
         convertView.setOnTouchListener(mOnTouchListener);
         convertView.setTag(position);
@@ -237,8 +243,6 @@ public class RedPocketRainView extends FrameLayout{
             return left;
         }
     }
-    private View bigRedPocketView;
-
     //红包click事件
     private OnTouchListener mOnTouchListener = new OnTouchListener() {
         @Override
@@ -249,16 +253,22 @@ public class RedPocketRainView extends FrameLayout{
                 if (object != null && object instanceof Integer) {
                     int position = (Integer)object;
                     stop();
-                    if (mOnItemClickListener.onItemClick(position, v)) return false;
+                    if (mOnItemClickListener.onRedPocketItemClick(position, v)) return false;
+
+                    if (mOpenRedPocketView != null) {
+                        mOpenRedPocketView = mAdapter.onBindOpenRedPocketView(mOpenRedPocketView, position, RedPocketRainView.this);
+                    } else {
+                        mOpenRedPocketView = mAdapter.onCreateOpenRedPocketView(mOpenRedPocketView, position, RedPocketRainView.this);
+                    }
+
                     mHandler.postDelayed(new Runnable() {
                         @Override
                         public void run() {
-                            bigRedPocketView = mAdapter.getOpenRedPocketView(RedPocketRainView.this);
-                            if (bigRedPocketView != null) {
-                                addView(bigRedPocketView);
+                            if (mOpenRedPocketView != null) {
+                                addView(mOpenRedPocketView);
                             }
                         }
-                    }, 400);
+                    }, 300);
 
                 }
 
@@ -268,15 +278,7 @@ public class RedPocketRainView extends FrameLayout{
     };
 
     public void removeBigRedPocketView() {
-        removeView(bigRedPocketView);
-    }
-
-    private View makeBigRedPocketView() {
-        TextView textView = new TextView(getContext());
-        textView.setBackgroundColor(Color.RED);
-        textView.setText("打开红包");
-        textView.setLayoutParams(new FrameLayout.LayoutParams(bigRedPocketWidth, bigRedPocketHeight));
-        return textView;
+        removeView(mOpenRedPocketView);
     }
 
 
@@ -307,9 +309,6 @@ public class RedPocketRainView extends FrameLayout{
 //        animatorSet.start();
         return animatorSet;
     }
-
-    private int bigRedPocketWidth = 600;
-    private int bigRedPocketHeight = 900;
 
     private Point getStartPoint(View view) {
         if (view == null) return null;
@@ -350,6 +349,12 @@ public class RedPocketRainView extends FrameLayout{
     public void destroy() {
         stop();
         mCacheViews.clear();
+        mOnItemClickListener = null;
+        mAdapter = null;
+        mHandler = null;
+        mOnTouchListener = null;
+        mOpenRedPocketView = null;
+        mRandom = null;
         //...
     }
 
@@ -361,7 +366,7 @@ public class RedPocketRainView extends FrameLayout{
     @Override
     public void onViewRemoved(View child) {
         super.onViewRemoved(child);
-        if (child == bigRedPocketView) return;
+        if (child == mOpenRedPocketView) return;
         child.setTag(null);
         FrameLayout.LayoutParams layoutParams = (FrameLayout.LayoutParams) child.getLayoutParams();
 //        Logger.d("Fade out View: " + child.getY() + ", " + child.getPivotY() + ", " + child.getRotationY() + ", " + child.getTranslationY() + ", " + layoutParams.leftMargin + ", " + layoutParams.topMargin + ", " + layoutParams.rightMargin + "," + layoutParams.bottomMargin);
@@ -379,26 +384,8 @@ public class RedPocketRainView extends FrameLayout{
         return (int) (spValue * fontScale + 0.5f);
     }
 
-    public void setOnItemClickListener(OnItemClickListener onItemClickListener) {
+    public void setOnItemClickListener(OnRedPocketItemClickListener onItemClickListener) {
         mOnItemClickListener = onItemClickListener;
-    }
-
-    public static abstract class RedRainPocketViewAdapter {
-        private Context mContext;
-
-        public RedRainPocketViewAdapter(Context context) {
-            this.mContext = context;
-        }
-
-        public abstract int getCount();
-
-        public abstract View getOpenRedPocketView(ViewGroup parent);
-
-        public abstract View getRedPocketView(View redView, int position, ViewGroup parent);
-    }
-
-    public interface OnItemClickListener {
-        boolean onItemClick(int position, View redView);
     }
 
 
