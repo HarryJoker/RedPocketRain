@@ -8,7 +8,7 @@ import android.view.ViewGroup;
  * Created on: 2019-11-15 20:11
  * Description:
  */
-public abstract class RedRainPocketViewAdapter {
+public abstract class RainPocketAdapter {
 
     public abstract int getCount();
 

@@ -1,12 +1,8 @@
 package com.joker.red.rain;
 
-import android.animation.AnimatorSet;
 import android.animation.ObjectAnimator;
-import android.animation.ValueAnimator;
 import android.content.Context;
 import android.content.res.TypedArray;
-import android.graphics.Color;
-import android.graphics.Point;
 import android.os.Handler;
 import android.os.Message;
 import android.util.AttributeSet;
@@ -14,13 +10,12 @@ import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
-import android.view.ViewGroup;
 import android.view.WindowManager;
-import android.view.animation.DecelerateInterpolator;
 import android.widget.FrameLayout;
-import android.widget.TextView;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -40,7 +35,7 @@ public class RedPocketRainView extends FrameLayout{
 
     private List<View> mCacheViews = new ArrayList<>();
 
-    private RedRainPocketViewAdapter mAdapter;
+    private RainPocketAdapter mAdapter;
 
     private Random mRandom;
 
@@ -49,6 +44,9 @@ public class RedPocketRainView extends FrameLayout{
 
     //周期：红包滑动时间
     private int rainDuration = 6000;
+
+    //红包雨收起时间
+    private int collapseDuration = 500;
 
     //红包宽度
     private int mRedPocketWidth = 200;
@@ -69,62 +67,48 @@ public class RedPocketRainView extends FrameLayout{
     //上一个红包的offsetX
     private int lastRedPocketOffsetX = 0;
 
-    private static final int ANIMATOR_STATE_RUNNING = 0X00F1;
-
-    private static final int ANIMATOR_STATE_END = 0X00F3;
-    //下雨状态
-    private int runState = 0;
-
     private View mOpenRedPocketView;
-
-    private OnRedPocketItemClickListener mOnItemClickListener = new OnRedPocketItemClickListener() {
-        @Override
-        public boolean onRedPocketItemClick(int position, View redPocketView) {
-            return false;
-        }
-    };
 
 
     public RedPocketRainView(@NonNull Context context) {
         super(context);
+        Log.d("RedPocketRainView1", "mRedPocketWidth:" + mRedPocketWidth + ", mRedPocketHeight:" + mRedPocketHeight + ", rainDuration:" + rainDuration + ", rainSeed:" + rainSeed + ", mRedPocketSpace:" + mRedPocketSpace);
+
+        AnimatorManager.getInstance().setOnAnimatorActionListener(mOnAnimatorActionListener);
     }
 
     public RedPocketRainView(@NonNull Context context, @Nullable AttributeSet attrs) {
         super(context, attrs);
-    }
 
-    public RedPocketRainView(@NonNull Context context, @Nullable AttributeSet attrs, int defStyleAttr) {
-        super(context, attrs, defStyleAttr);
-
-        TypedArray typedArray = context.getTheme().obtainStyledAttributes(attrs, R.styleable.RedPocketRainView, defStyleAttr, 0);
+        TypedArray typedArray = context.obtainStyledAttributes(attrs, R.styleable.RedPocketRainView);
         rainSeed = Float.valueOf(typedArray.getFloat(R.styleable.RedPocketRainView_rainSeed, 0.5f) * 1000).intValue();
         rainDuration = Float.valueOf(typedArray.getFloat(R.styleable.RedPocketRainView_rainDuration, 6f) * 1000).intValue();
+        collapseDuration = Float.valueOf(typedArray.getFloat(R.styleable.RedPocketRainView_collapseDuration, 6f) * 1000).intValue();
         mRedPocketWidth = sp2px(typedArray.getDimension(R.styleable.RedPocketRainView_redPocketWidth, 100f));
         mRedPocketHeight = sp2px(typedArray.getDimension(R.styleable.RedPocketRainView_redPocketHeight, 150f));
         mRedPocketSpace = sp2px(typedArray.getDimension(R.styleable.RedPocketRainView_redPocketMinSpace, 10f));
 
-        Log.d("RedPocketRainView", "mRedPocketWidth:" + mRedPocketWidth + ", mRedPocketHeight:" + mRedPocketHeight + ", rainDuration:" + rainDuration + ", rainSeed:" + rainSeed + ", mRedPocketSpace:" + mRedPocketSpace);
+        AnimatorManager.getInstance().setOnAnimatorActionListener(mOnAnimatorActionListener);
+
+        Log.d("RedPocketRainView2", "mRedPocketWidth:" + mRedPocketWidth + ", mRedPocketHeight:" + mRedPocketHeight + ", rainDuration:" + rainDuration + ", rainSeed:" + rainSeed + ", collapseDuration:" + collapseDuration + ", mRedPocketSpace:" + mRedPocketSpace);
     }
+
 
     private Handler mHandler = new Handler() {
         @Override
         public void handleMessage(@NonNull Message msg) {
             super.handleMessage(msg);
-            fadeInRedPocketView();
+            if (AnimatorManager.getInstance().getAnimatorState() == AnimatorManager.ANIMATOR_STATE_RUNNING) {
+                fadeInRedPocketView();
+            }
         }
     };
-
-
-    public void start() {
-        runState = ANIMATOR_STATE_RUNNING;
-        fadeInRedPocketView();
-    }
 
     private void fadeInRedPocketView() {
         View convertView = getNextRedPocketView(curRedPocketPostion);
         int offsetX = getNextRedPocketViewOffsetX(lastRedPocketOffsetX);
         setCurRedPocketViewOffsetX(convertView, offsetX);
-        addView(convertView);
+        this.addView(convertView);
         //更新position
         curRedPocketPostion++;
         if (curRedPocketPostion == mAdapter.getCount()) {
@@ -133,13 +117,15 @@ public class RedPocketRainView extends FrameLayout{
         //更新进入屏幕的x位置
         lastRedPocketOffsetX = offsetX;
 
-        startPropertyAnim(convertView);
+        //开始滑落动画
+        AnimatorManager.getInstance().startSliding(convertView, rainDuration, getScreenHieght());
 
-        //循环添加view：下雨
-        if (runState == ANIMATOR_STATE_RUNNING) {
+        //循环添加view
+        if (AnimatorManager.getInstance().getAnimatorState() == AnimatorManager.ANIMATOR_STATE_RUNNING) {
             mHandler.sendEmptyMessageDelayed(0, rainSeed);
         }
     }
+
 
     //设置redPocket View的offset
     private void setCurRedPocketViewOffsetX(View view, int offsetX) {
@@ -169,60 +155,6 @@ public class RedPocketRainView extends FrameLayout{
         return convertView;
     }
 
-    // 动画实际执行
-    private void startPropertyAnim(View view) {
-        if (view == null) return;
-        ObjectAnimator anim = ObjectAnimator.ofFloat(view, "translationY", view.getTranslationY(), getScreenHieght(), getScreenHieght());
-        anim.setDuration(rainDuration);
-        anim.addUpdateListener(mAnimatorListener);
-        // 正式开始启动执行动画
-        anim.start();
-    }
-
-    //动画监听
-    private ValueAnimator.AnimatorUpdateListener mAnimatorListener = new ValueAnimator.AnimatorUpdateListener() {
-        @Override
-        public void onAnimationUpdate(ValueAnimator animation) {
-            float value = (Float) animation.getAnimatedValue();
-            ObjectAnimator objectAnimator = (ObjectAnimator) animation;
-            if (objectAnimator == null || objectAnimator.getTarget() == null) return;
-            View redPocketView = (View) objectAnimator.getTarget();
-            if (runState == ANIMATOR_STATE_RUNNING) {
-                //动画执行中，发出窗口回收
-                if (value >= getScreenHieght()) {
-                    animation.cancel();
-                    Log.d("", "fade out redPocket view, updateValue: " + value + ", curPosition:" + redPocketView.getTag() + ", view:" + redPocketView);
-                    fadeOutRedPocketView(redPocketView);
-                }
-            } else if (runState == ANIMATOR_STATE_END) {
-                //结束动画
-                animation.cancel();
-                fadeOutRedPocketView(redPocketView);
-            }
-//            else if (runState == ANIMATOR_STATE_PAUSE) {
-//                //暂停动画
-//                if (animation != null) {
-//                    animation.pause();
-//                    collectPauseAnimator(animation);
-//                }
-//            }
-        }
-    };
-
-    //收集缓存暂停动画播放器
-//    private void collectPauseAnimator(ValueAnimator animator) {
-//        if (animator == null) return;
-//        if (pauseAnimators == null) pauseAnimators = new ArrayList<>();
-//        pauseAnimators.add(animator);
-//    }
-
-    //下雨超出window，回收view
-    private void fadeOutRedPocketView(View redPocketView) {
-        if (redPocketView == null) return;
-        removeView(redPocketView);
-    }
-
-
     //计算生成redPocket view的offsetX
     private int getNextRedPocketViewOffsetX(int lastOffetX) {
         if (mRandom == null) mRandom = new Random();
@@ -243,35 +175,37 @@ public class RedPocketRainView extends FrameLayout{
             return left;
         }
     }
+
+    private View getOpenRedPocketView(int position) {
+        if (mOpenRedPocketView != null) {
+            mOpenRedPocketView = mAdapter.onBindOpenRedPocketView(mOpenRedPocketView, position, RedPocketRainView.this);
+        } else {
+            mOpenRedPocketView = mAdapter.onCreateOpenRedPocketView(mOpenRedPocketView, position, RedPocketRainView.this);
+        }
+        return mOpenRedPocketView;
+    }
+
+    //显示选中的要打开的红包
+    private void showOpenRedPocketView(int position) {
+        View openView = getOpenRedPocketView(position);
+        addView(openView);
+        AnimatorManager.getInstance().startScaleOpen(openView, 1000);
+    }
+
+    private int selectedRedPocketPosition = -1;
+
     //红包click事件
     private OnTouchListener mOnTouchListener = new OnTouchListener() {
         @Override
         public boolean onTouch(View v, MotionEvent event) {
-
             if (event.getAction() == MotionEvent.ACTION_UP) {
-                Object object = v.getTag();
-                if (object != null && object instanceof Integer) {
-                    int position = (Integer)object;
-                    stop();
-                    if (mOnItemClickListener.onRedPocketItemClick(position, v)) return false;
-
-                    if (mOpenRedPocketView != null) {
-                        mOpenRedPocketView = mAdapter.onBindOpenRedPocketView(mOpenRedPocketView, position, RedPocketRainView.this);
-                    } else {
-                        mOpenRedPocketView = mAdapter.onCreateOpenRedPocketView(mOpenRedPocketView, position, RedPocketRainView.this);
-                    }
-
-                    mHandler.postDelayed(new Runnable() {
-                        @Override
-                        public void run() {
-                            if (mOpenRedPocketView != null) {
-                                addView(mOpenRedPocketView);
-                            }
-                        }
-                    }, 300);
-
+                if (v.getTag() == null || !(v.getTag() instanceof Integer)) return false;
+                int position = (Integer)v.getTag();
+                //未消费click事件
+                if (mOnItemClickListener != null && !mOnItemClickListener.onRedPocketItemClick(position, v)) {
+                    selectedRedPocketPosition = position;
+                    stay();
                 }
-
             }
             return false;
         }
@@ -281,40 +215,153 @@ public class RedPocketRainView extends FrameLayout{
         removeView(mOpenRedPocketView);
     }
 
-
-    private AnimatorSet startOpenRedPocketAnim(View small, View big) {
-        if (small == null || big == null) return null;
-
-        Point point = getStartPoint(big);
-
-
-        float sX = big.getMeasuredWidth() * 1f / small.getWidth();
-        float sY = big.getMeasuredHeight() * 1f / small.getHeight();
-
-        Log.d("Anmimator", "small x:" + small.getX() + ", y:" + small.getY() +  ", width:" + small.getWidth() + ", height:" + small.getHeight() + "\n" +
-                "big x:" + point.x + ", y:" + point.y + ", width:" + big.getMeasuredWidth() + ", heigth:" + big.getMeasuredHeight() + "\n" +
-                "anim scaleX:" + sX + ", scaleY:" + sY + "offsetX:" + (sX - small.getX()) + ", offsetY:" + (sY - small.getY())) ;
-
-        AnimatorSet animatorSet = new AnimatorSet();//组合动画
-        ObjectAnimator scaleX = ObjectAnimator.ofFloat(big, "scaleX", 1f, sX);
-        ObjectAnimator scaleY = ObjectAnimator.ofFloat(big, "scaleY", 1f, sY);
-
-        ObjectAnimator translationX = new ObjectAnimator().ofFloat(big,"translationX",small.getTranslationX(), sX - small.getX());
-        ObjectAnimator translationY = new ObjectAnimator().ofFloat(big,"translationY",small.getTranslationY(), sY - small.getY());
-
-        animatorSet.setDuration(5000);
-        animatorSet.setInterpolator(new DecelerateInterpolator());
-        animatorSet.play(scaleX).with(scaleY);//两个动画同时开始
-        animatorSet.playTogether(scaleX, scaleY, translationX, translationY);
-//        animatorSet.start();
-        return animatorSet;
+    //销毁红包雨view
+    public void destroy() {
+        stop();
+        mCacheViews.clear();
+        mOnItemClickListener = null;
+        mAdapter = null;
+        mHandler = null;
+        mOnTouchListener = null;
+        mOpenRedPocketView = null;
+        mRandom = null;
+        //...
     }
 
-    private Point getStartPoint(View view) {
-        if (view == null) return null;
-        int x = (getScreenWidth() - view.getMeasuredWidth()) / 2;
-        int y = (getScreenHieght() - view.getMeasuredHeight()) / 2;
-        return new Point(x, y);
+    public void start() {
+        if (AnimatorManager.getInstance().getAnimatorState() != AnimatorManager.ANIMATOR_STATE_RUNNING) {
+            AnimatorManager.getInstance().prepare();
+            fadeInRedPocketView();
+        }
+    }
+
+    public void pause() {
+        AnimatorManager.getInstance().pauseAnimator();
+    }
+
+    public void resume() {
+        if (AnimatorManager.getInstance().getAnimatorState() == AnimatorManager.ANIMATOR_STATE_PAUSE) {
+            AnimatorManager.getInstance().resumelAnimator();
+            fadeInRedPocketView();
+        }
+    }
+
+    public void stop() {
+        if (AnimatorManager.getInstance().getAnimatorState() == AnimatorManager.ANIMATOR_STATE_PAUSE) {
+            AnimatorManager.getInstance().resumelAnimator();
+        }
+        AnimatorManager.getInstance().stopAnimator();
+    }
+
+    public void stay() {
+        if (AnimatorManager.getInstance().getAnimatorState() == AnimatorManager.ANIMATOR_STATE_PAUSE) {
+            AnimatorManager.getInstance().resumelAnimator();
+        }
+        AnimatorManager.getInstance().stayAnimator();
+    }
+
+    @Override
+    public void onViewRemoved(View child) {
+        super.onViewRemoved(child);
+        if (child == mOpenRedPocketView) {
+            selectedRedPocketPosition = -1;
+            return;
+        }
+        child.setTag(null);
+        if (mCacheViews != null) {
+            mCacheViews.add(child);
+        }
+
+        Log.d(TAG,  "onViewRemoved:" + child + ", " + "childTag:" + child.getTag() + ", findViewByTag:" + findViewWithTag(child.getTag()));
+    }
+
+
+    private OnAnimatorActionListener mOnAnimatorActionListener = new OnAnimatorActionListener() {
+
+        private View getAnimatorTargetView(ObjectAnimator animator) {
+            if (animator.getTarget() != null  && animator.getTarget() instanceof View){
+                return (View) animator.getTarget();
+            }
+            return null;
+        }
+
+        @Override
+        public void onAnimatorResume(ObjectAnimator animator) {
+
+        }
+
+        @Override
+        public void onAnimatorStart(ObjectAnimator animator) {
+
+        }
+
+        @Override
+        public void onAnimatorPause(ObjectAnimator animator) {
+
+        }
+
+        @Override
+        public void onAnimatorEnd(ObjectAnimator animator) {
+            View view = getAnimatorTargetView(animator);
+            Log.i(TAG, "position: " + view.getTag() + " onAnimatorEnd-------------------->");
+            if (view != null) {
+                removeView(view);
+                view.setTranslationY(0f);
+                view.setTranslationX(0f);
+                view.setScaleX(1.0f);
+                view.setScaleY(1.0f);
+            }
+        }
+
+        @Override
+        public void onAnimatorStay(ObjectAnimator animator) {
+            View view = getAnimatorTargetView(animator);
+            if (view != null) {
+                Log.d(TAG,  "Position: " + view.getTag() + "开启回收动画..............");
+            }
+        }
+
+        @Override
+        public void onAnimatorStayAll() {
+            Log.e(TAG, "animator stay all............");
+            collapseScaleRedPocket();
+        }
+
+        @Override
+        public void onAnimatorZeroAll() {
+            showOpenRedPocketView(selectedRedPocketPosition);
+            Log.e(TAG, "animator zero all............");
+        }
+    };
+
+    private void collapseScaleRedPocket() {
+        float targetX = (getScreenWidth() - mRedPocketWidth) / 2;
+        float targetY = (getScreenHieght() - mRedPocketHeight) / 2;
+        AnimatorManager.getInstance().zeroAnimator();
+        for (int index = 0; index < getChildCount(); index++) {
+            AnimatorManager.getInstance().startCollapse(getChildAt(index), collapseDuration, targetX, targetY);
+        }
+    }
+
+    private OnPocketItemClickListener mOnItemClickListener = new OnPocketItemClickListener() {
+        @Override
+        public boolean onRedPocketItemClick(int position, View redPocketView) {
+            return false;
+        }
+    };
+
+    public void setAdapter(RainPocketAdapter adapter) {
+        this.mAdapter = adapter;
+    }
+
+
+    private int sp2px(float spValue) {
+        final float fontScale = getResources().getDisplayMetrics().scaledDensity;
+        return (int) (spValue * fontScale + 0.5f);
+    }
+
+    public void setOnItemClickListener(OnPocketItemClickListener onItemClickListener) {
+        mOnItemClickListener = onItemClickListener;
     }
 
     private int getScreenHieght() {
@@ -338,74 +385,4 @@ public class RedPocketRainView extends FrameLayout{
         }
         return mScreenWidth;
     }
-
-    @Override
-    protected void onDetachedFromWindow() {
-        super.onDetachedFromWindow();
-        destroy();
-    }
-
-    //销毁红包雨view
-    public void destroy() {
-        stop();
-        mCacheViews.clear();
-        mOnItemClickListener = null;
-        mAdapter = null;
-        mHandler = null;
-        mOnTouchListener = null;
-        mOpenRedPocketView = null;
-        mRandom = null;
-        //...
-    }
-
-    public void stop() {
-        runState = ANIMATOR_STATE_END;
-        removeAllViews();
-    }
-
-    @Override
-    public void onViewRemoved(View child) {
-        super.onViewRemoved(child);
-        if (child == mOpenRedPocketView) return;
-        child.setTag(null);
-        FrameLayout.LayoutParams layoutParams = (FrameLayout.LayoutParams) child.getLayoutParams();
-//        Logger.d("Fade out View: " + child.getY() + ", " + child.getPivotY() + ", " + child.getRotationY() + ", " + child.getTranslationY() + ", " + layoutParams.leftMargin + ", " + layoutParams.topMargin + ", " + layoutParams.rightMargin + "," + layoutParams.bottomMargin);
-//        Logger.d("onViewRemoved:" + child + ", " + "childTag:" + child.getTag() + ", findViewByTag:" + findViewWithTag(child.getTag()));
-        mCacheViews.add(child);
-    }
-
-    public void setAdapter(RedRainPocketViewAdapter adapter) {
-        this.mAdapter = adapter;
-    }
-
-
-    private int sp2px(float spValue) {
-        final float fontScale = getResources().getDisplayMetrics().scaledDensity;
-        return (int) (spValue * fontScale + 0.5f);
-    }
-
-    public void setOnItemClickListener(OnRedPocketItemClickListener onItemClickListener) {
-        mOnItemClickListener = onItemClickListener;
-    }
-
-
-    //    private List<ValueAnimator> pauseAnimators;
-
-//    private static final int ANIMATOR_STATE_PAUSE   = 0X00F2;
-
-//    public void pause() {
-//        runState = ANIMATOR_STATE_PAUSE;
-//    }
-//
-//    public void resume() {
-//        if (runState == ANIMATOR_STATE_PAUSE && pauseAnimators != null) {
-//            Iterator<ValueAnimator> iterator = pauseAnimators.iterator();
-//            while (iterator.hasNext()) {
-//                iterator.next().resume();
-//                iterator.remove();
-//            }
-//        }
-//        runState = ANIMATOR_STATE_RUNNING;
-//        mHandler.sendEmptyMessage(MESSAGE_FADE_IN_REDPOCKET);
-//    }
 }

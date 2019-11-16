@@ -7,7 +7,7 @@ import android.view.View;
  * Created on: 2019-11-15 20:09
  * Description:
  */
-public interface OnRedPocketItemClickListener {
+public interface OnPocketItemClickListener {
 
     boolean onRedPocketItemClick(int position, View redPocketView);
 }

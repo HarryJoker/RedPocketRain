@@ -1,22 +1,23 @@
 package com.harry.joker.redpocketrain;
 
-import androidx.annotation.Nullable;
-import androidx.appcompat.app.AppCompatActivity;
-
+import android.app.Activity;
 import android.content.Context;
-import android.graphics.drawable.BitmapDrawable;
+import android.graphics.Color;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.Window;
+import android.view.WindowManager;
 import android.widget.ImageView;
 import android.widget.Toast;
 
-import com.joker.red.rain.OnRedPocketItemClickListener;
-import com.joker.red.rain.RedPocketRainView;
-import com.joker.red.rain.RedRainPocketViewAdapter;
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.AppCompatActivity;
 
-import java.util.logging.Logger;
+import com.joker.red.rain.OnPocketItemClickListener;
+import com.joker.red.rain.RedPocketRainView;
+import com.joker.red.rain.RainPocketAdapter;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -25,6 +26,9 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        setStatusBarTranprent(this);
+
         setContentView(R.layout.activity_main);
 
         mRedPocketRainView = findViewById(R.id.redpocketrain);
@@ -43,12 +47,22 @@ public class MainActivity extends AppCompatActivity {
             mRedPocketRainView.stop();
         }
 
-        if (v.getId() == R.id.tv_destroy) {
-            mRedPocketRainView.destroy();
+        if (v.getId() == R.id.tv_resume) {
+            mRedPocketRainView.resume();
+        }
+
+        if (v.getId() == R.id.tv_stay) {
+//            mRedPocketRainView.destroy();
+            mRedPocketRainView.stay();
+        }
+
+        if (v.getId() == R.id.tv_pause) {
+            mRedPocketRainView.pause();
+
         }
     }
 
-    private OnRedPocketItemClickListener mOnItemClickListener = new OnRedPocketItemClickListener() {
+    private OnPocketItemClickListener mOnItemClickListener = new OnPocketItemClickListener() {
         @Override
         public boolean onRedPocketItemClick(int position, View redView) {
 //          startActivity(new Intent(RedRainActivity.this, RedDetailActivity.class));
@@ -72,8 +86,7 @@ public class MainActivity extends AppCompatActivity {
     };
 
 
-
-    class MyRedRainPocketAdapter extends RedRainPocketViewAdapter {
+    class MyRedRainPocketAdapter extends RainPocketAdapter {
 
         private Drawable mRedPocketDrawable;
 
@@ -114,5 +127,20 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
+
+
+
+    private void setStatusBarTranprent(Activity activity) {
+        Window window = getWindow();
+        View decorView = window.getDecorView();
+        //两个 flag 要结合使用，表示让应用的主体内容占用系统状态栏的空间
+        int option = View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN | View.SYSTEM_UI_FLAG_LAYOUT_STABLE;
+        decorView.setSystemUiVisibility(option);
+        window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
+        //设置状态栏为透明，否则在部分手机上会呈现系统默认的浅灰色
+        window.setStatusBarColor(Color.TRANSPARENT);
+        //导航栏颜色也可以考虑设置为透明色
+        window.setNavigationBarColor(Color.TRANSPARENT);
+    }
 
 }

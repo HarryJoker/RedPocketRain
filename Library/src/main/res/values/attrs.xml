@@ -6,6 +6,7 @@
     <declare-styleable name="RedPocketRainView">
         <attr name="rainSeed" format="float" />
         <attr name="rainDuration" format="float" />
+        <attr name="collapseDuration" format="float"/>
         <attr name="redPocketWidth" format="reference|dimension" />
         <attr name="redPocketHeight" format="reference|dimension" />
         <attr name="redPocketMinSpace" format="reference|dimension" />

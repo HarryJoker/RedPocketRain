@@ -1,58 +1,90 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".MainActivity">
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:background="#f4f4f4">
 
+    <TextView android:text="红包雨"
+        android:textColor="#ffff"
+        android:paddingTop="20dp"
+        android:textSize="18sp"
+        android:gravity="center"
+        android:background="@drawable/shape_main"
+        android:layout_width="match_parent"
+        android:layout_height="80dp"/>
 
     <com.joker.red.rain.RedPocketRainView
         android:id="@+id/redpocketrain"
+        app:rainDuration="5.5"
+        app:rainSeed="0.5"
+        app:collapseDuration="0.6"
+        app:redPocketMinSpace="10dp"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_gravity="bottom"
-        android:padding="20dp"
-        android:orientation="horizontal">
 
-        <TextView android:id="@+id/tv_start"
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|right"
+        android:padding="20dp"
+        android:orientation="vertical">
+
+
+<!--        <TextView android:id="@+id/tv_test"-->
+<!--            android:layout_width="wrap_content"-->
+<!--            android:layout_height="wrap_content"-->
+<!--            android:layout_gravity="left|bottom"-->
+<!--            android:background="#3000"-->
+<!--            android:padding="10dp"-->
+<!--            android:onClick="click"-->
+<!--            android:text="实验" />-->
+
+        <Button android:id="@+id/tv_start"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="left|bottom"
             android:background="#3000"
-            android:padding="15dp"
+            android:padding="10dp"
             android:onClick="click"
-            android:text="开始" />
+            android:text="start" />
 
-<!--        <TextView android:id="@+id/tv_pause"-->
-<!--            android:layout_marginLeft="20dp"-->
-<!--            android:layout_width="wrap_content"-->
-<!--            android:layout_height="wrap_content"-->
-<!--            android:background="#3000"-->
-<!--            android:padding="15dp"-->
-<!--            android:onClick="click"-->
-<!--            android:text="暂停" />-->
-
-        <TextView android:id="@+id/tv_stop"
-            android:layout_marginLeft="20dp"
-            android:layout_marginRight="20dp"
+        <Button android:id="@+id/tv_pause"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:background="#3000"
-            android:padding="15dp"
+            android:padding="10dp"
+            android:layout_marginTop="10dp"
             android:onClick="click"
-            android:text="停止" />
+            android:text="pause" />
 
-        <TextView android:id="@+id/tv_destroy"
+        <Button android:id="@+id/tv_resume"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:background="#3000"
-            android:padding="15dp"
+            android:padding="10dp"
+            android:layout_marginTop="10dp"
             android:onClick="click"
-            android:text="销毁" />
+            android:text="resume" />
+
+        <Button android:id="@+id/tv_stop"
+            android:layout_marginTop="10dp"
+             android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="#3000"
+            android:padding="10dp"
+            android:onClick="click"
+            android:text="stop" />
+
+        <Button android:id="@+id/tv_stay"
+            android:layout_marginTop="10dp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="#3000"
+            android:padding="10dp"
+            android:onClick="click"
+            android:text="stay" />
     </LinearLayout>
     
 </FrameLayout>
